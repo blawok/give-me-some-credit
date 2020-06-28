@@ -19,7 +19,11 @@ summary(data)
 data$def <- data$SeriousDlqin2yrs
 data$SeriousDlqin2yrs <- NULL
 data$X <- NULL
-
+data$def_two <- (1 - data$def)
+data$NumberOfTime30_59DaysPastDueNotWorse <- data$NumberOfTime30.59DaysPastDueNotWorse
+data$NumberOfTime60_89DaysPastDueNotWorse <- data$NumberOfTime60.89DaysPastDueNotWorse 
+data$NumberOfTime30.59DaysPastDueNotWorse <- NULL
+data$NumberOfTime60.89DaysPastDueNotWorse <- NULL
 
 # ------------------------------------------------------------------------------ train/test split
 
@@ -83,10 +87,8 @@ train$RevolvingUtilizationOfUnsecuredLines <- remove_outliers(train$RevolvingUti
 # ------------------------------------------------------------------------------ Histograms of all variables
 summary(train)
 
-hist_cols <- c("RevolvingUtilizationOfUnsecuredLines", "age",
-               "DebtRatio","MonthlyIncome",
-               "NumberOfDependents")
-hist_df <- gather(train[, -which(names(train) %in% hist_cols)], key = "name", value = "value")
+numeric_cols <- colnames(select_if(train, is.numeric))[1:10]
+hist_df <- gather(train[, which(names(train) %in% numeric_cols)], key = "name", value = "value")
 
 ggplot(hist_df) +
   geom_histogram(aes(value)) +
@@ -94,60 +96,90 @@ ggplot(hist_df) +
   ggtitle("Histograms of all variables")
 
 # different distributions, a lot of outliers, woe will deal with this
-hist_df <-NULL
-
+rm(hist_df)
 
 
 # ------------------------------------------------------------------------------ WOE
-summary(train)
-colnames(train)
-
-cols_to_woe <-  c(#"NumberOfTime30.59DaysPastDueNotWorse", 
-                  "NumberOfOpenCreditLinesAndLoans",
-                  "NumberOfTimes90DaysLate",
-                  "NumberRealEstateLoansOrLines",
-                  "NumberOfTime60.89DaysPastDueNotWorse",
-                  "NumberOfDependents"
-                  )
 
 train_woe <- as.data.frame(train)
 test_woe <- as.data.frame(test)
-iv_values <- list()
-gini <- list()
 
 
-for (variable in cols_to_woe){
-  print(variable)
-  col_name_coarse <- paste(variable, 'coarse', sep='_')
-  col_name_woe <- paste(variable, 'woe', sep='_')
-  
-  var_woe <- smbinning(train[,c("def", variable)],y="def", x=variable, p=0.1)
-  cut_points <- list(var_woe$cuts)
-  IV <- var_woe$ivtable
-  
-  
-  train_woe[,col_name_coarse]<- cut(train[,variable], breaks=c(-Inf,unique(var_woe$cuts),Inf), 
-                                    labels=c(paste("<=", unique(var_woe$cuts)),"<= Inf"),
+result_1 <- smbinning(train[,c("def", "NumberOfTime30_59DaysPastDueNotWorse")], y="def", x="NumberOfTime30_59DaysPastDueNotWorse", p=0.1)
+train_woe[,"NumberOfTime30_59DaysPastDueNotWorse_coarse"]<- cut(as.numeric(train[,"NumberOfTime30_59DaysPastDueNotWorse"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
+                                     labels=c(paste("<=", unique(result_1$cuts)),"<= Inf"),
+                                     include.lowest = T)
+test_woe[,"NumberOfTime30_59DaysPastDueNotWorse_coarse"]<- cut(as.numeric(test[,"NumberOfTime30_59DaysPastDueNotWorse"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
+                                    labels=c(paste("<=", unique(result_1$cuts)),"<= Inf"),
                                     include.lowest = T)
-  train_woe[,col_name_coarse]<-fct_explicit_na(train_woe[,col_name_coarse], na_level="Missing")
-  
-  test_woe[,col_name_coarse]<- cut(test[,variable], breaks=c(-Inf,unique(var_woe$cuts),Inf), 
-                                   labels=c(paste("<=", unique(var_woe$cuts)),"<= Inf"),
-                                   include.lowest = T)
-  test_woe[,col_name_coarse]<-fct_explicit_na(test_woe[,col_name_coarse], na_level="Missing")
-  
-  IVw<-sum(iv.mult(test_woe,"def_two",vars=col_name_coarse)[[1]][,"miv"])
-  IV$Cutpoint<-ifelse(grepl(">",IV$Cutpoint)==T,"<= Inf",IV$Cutpoint)
-  
-  train_woe <- merge(train_woe,IV[,c("Cutpoint", "WoE")],by.x= col_name_coarse, by.y="Cutpoint", all.x=T, sort=F)
-  colnames(train_woe)[which(names(train_woe) == "WoE")] <- col_name_woe
-  
-  test_woe <- merge(test_woe,IV[,c("Cutpoint", "WoE")],by.x= col_name_coarse, by.y="Cutpoint", all.x=T, sort=F)
-  colnames(test_woe)[which(names(test_woe) == "WoE")] <- col_name_woe
-  
-  iv_values <- c(iv_values, var_woe$iv)
-  gini<- c(gini, 2*auc(train_woe$def,train_woe[,col_name_woe])-1)
-}
+IV <- result_1$ivtable
+IV$Cutpoint<-ifelse(grepl(">",IV$Cutpoint)==T,"<= Inf",IV$Cutpoint)
+train_woe <- merge(train_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberOfTime30_59DaysPastDueNotWorse_coarse", by.y="Cutpoint", all.x=T, sort=F)
+colnames(train_woe)[which(names(train_woe) == "WoE")] <- "NumberOfTime30_59DaysPastDueNotWorse_woe"
+test_woe <- merge(test_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberOfTime30_59DaysPastDueNotWorse_coarse", by.y="Cutpoint", all.x=T, sort=F)
+colnames(test_woe)[which(names(test_woe) == "WoE")] <- "NumberOfTime30_59DaysPastDueNotWorse_woe"
+# OK IV 0.6618
 
-names(iv_values) <- cols_to_woe
-names(gini) <- cols_to_woe
+
+result_1 <- smbinning(train[,c("def", "NumberOfOpenCreditLinesAndLoans")], y="def", x="NumberOfOpenCreditLinesAndLoans", p=0.1)
+train_woe[,"NumberOfOpenCreditLinesAndLoans_coarse"]<- cut(as.numeric(train[,"NumberOfOpenCreditLinesAndLoans"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
+                                     labels=c(paste("<=", unique(result_1$cuts)),"<= Inf"),
+                                     include.lowest = T)
+test_woe[,"NumberOfOpenCreditLinesAndLoans_coarse"]<- cut(as.numeric(test[,"NumberOfOpenCreditLinesAndLoans"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
+                                    labels=c(paste("<=", unique(result_1$cuts)),"<= Inf"),
+                                    include.lowest = T)
+IV <- result_1$ivtable
+IV$Cutpoint<-ifelse(grepl(">",IV$Cutpoint)==T,"<= Inf",IV$Cutpoint)
+train_woe <- merge(train_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberOfOpenCreditLinesAndLoans_coarse", by.y="Cutpoint", all.x=T, sort=F)
+colnames(train_woe)[which(names(train_woe) == "WoE")] <- "NumberOfOpenCreditLinesAndLoans_woe"
+test_woe <- merge(test_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberOfOpenCreditLinesAndLoans_coarse", by.y="Cutpoint", all.x=T, sort=F)
+colnames(test_woe)[which(names(test_woe) == "WoE")] <- "NumberOfOpenCreditLinesAndLoans_woe"
+# OK IV 0.0661
+
+result_1 <- smbinning(train[,c("def", "NumberRealEstateLoansOrLines")], y="def", x="NumberRealEstateLoansOrLines", p=0.1)
+train_woe[,"NumberRealEstateLoansOrLines_coarse"]<- cut(as.numeric(train[,"NumberRealEstateLoansOrLines"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
+                                     labels=c(paste("<=", unique(result_1$cuts)),"<= Inf"),
+                                     include.lowest = T)
+test_woe[,"NumberRealEstateLoansOrLines_coarse"]<- cut(as.numeric(test[,"NumberRealEstateLoansOrLines"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
+                                    labels=c(paste("<=", unique(result_1$cuts)),"<= Inf"),
+                                    include.lowest = T)
+IV <- result_1$ivtable
+IV$Cutpoint<-ifelse(grepl(">",IV$Cutpoint)==T,"<= Inf",IV$Cutpoint)
+train_woe <- merge(train_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberRealEstateLoansOrLines_coarse", by.y="Cutpoint", all.x=T, sort=F)
+colnames(train_woe)[which(names(train_woe) == "WoE")] <- "NumberRealEstateLoansOrLines_woe"
+test_woe <- merge(test_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberRealEstateLoansOrLines_coarse", by.y="Cutpoint", all.x=T, sort=F)
+colnames(test_woe)[which(names(test_woe) == "WoE")] <- "NumberRealEstateLoansOrLines_woe"
+# OK IV 0.0466
+
+
+result_1 <- smbinning(train[,c("def_two", "DebtRatio")], y="def_two", x="DebtRatio", p=0.1)
+train_woe[,"DebtRatio_coarse"]<- cut(as.numeric(train$DebtRatio), breaks=c(-Inf,unique(result_1$cuts),Inf), 
+                                  labels=c(paste("<=", unique(result_1$cuts)),"<= Inf"),
+                                  include.lowest = T)
+test_woe[,"DebtRatio_coarse"]<- cut(as.numeric(test$DebtRatio), breaks=c(-Inf,unique(result_1$cuts),Inf), 
+                                     labels=c(paste("<=", unique(result_1$cuts)),"<= Inf"),
+                                     include.lowest = T)
+IV <- result_1$ivtable
+IV$Cutpoint<-ifelse(grepl(">",IV$Cutpoint)==T,"<= Inf",IV$Cutpoint)
+train_woe <- merge(train_woe,IV[,c("Cutpoint", "WoE")],by.x= "DebtRatio_coarse", by.y="Cutpoint", all.x=T, sort=F)
+colnames(train_woe)[which(names(train_woe) == "WoE")] <- "DebtRatio_woe"
+test_woe <- merge(test_woe,IV[,c("Cutpoint", "WoE")],by.x= "DebtRatio_coarse", by.y="Cutpoint", all.x=T, sort=F)
+colnames(test_woe)[which(names(test_woe) == "WoE")] <- "DebtRatio_woe"
+# OK IV 0.0723
+
+rm(IV)
+rm(result_1)
+
+cols_to_woe <-  c("NumberOfTime30_59DaysPastDueNotWorse",
+                  "NumberOfOpenCreditLinesAndLoans",
+                  "NumberRealEstateLoansOrLines",
+                  "DebtRatio")
+
+train_woe <- train_woe[, -which(colnames(train_woe) %in% grep("coarse", colnames(train_woe), value = TRUE) | colnames(train_woe) %in% cols_to_woe) ]
+test_woe <- test_woe[, -which(colnames(test_woe) %in% grep("coarse", colnames(test_woe), value = TRUE) | colnames(test_woe) %in% cols_to_woe) ]
+
+
+save(train_woe, file = "data/train_woe.Rdata")
+save(test_woe, file = "data/test_woe.Rdata")
+
+summary(train_woe)

@@ -179,6 +179,15 @@ train_woe <- train_woe[, -which(colnames(train_woe) %in% grep("coarse", colnames
 test_woe <- test_woe[, -which(colnames(test_woe) %in% grep("coarse", colnames(test_woe), value = TRUE) | colnames(test_woe) %in% cols_to_woe) ]
 
 
+train_woe$def <- factor(ifelse(train_woe$def == "1","yes","no"))
+train_woe$no_income <- factor(ifelse(train_woe$no_income == "1","yes","no"))
+train_woe$no_dependents <- factor(ifelse(train_woe$no_dependents == "1","yes","no"))
+
+test_woe$def <- factor(ifelse(test_woe$def == "1","yes","no"))
+test_woe$no_income <- factor(ifelse(test_woe$no_income == "1","yes","no"))
+test_woe$no_dependents <- factor(ifelse(test_woe$no_dependents == "1","yes","no"))
+
+
 save(train_woe, file = "data/train_woe.Rdata")
 save(test_woe, file = "data/test_woe.Rdata")
 

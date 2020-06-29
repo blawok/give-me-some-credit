@@ -7,8 +7,6 @@ library(plotROC)
 
 source("model_functions.R")
 
-train_woe$def_two <- NULL
-test_woe$def_two <- NULL
 # ------------------------------------------------------------------------------ Baseline model estimation
 
 baza<-glm(def ~ 1,data=train_woe, family=binomial("logit"))

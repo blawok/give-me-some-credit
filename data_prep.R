@@ -10,6 +10,10 @@ library(pROC)
 library(forcats)
 library(woe)
 library(riv)
+library(DMwR)
+library(corrplot)
+library(smotefamily)
+library(imbalance)
 
 
 data <- read.csv('data/cs-training.csv')
@@ -178,6 +182,7 @@ cols_to_woe <-  c("NumberOfTime30_59DaysPastDueNotWorse",
 train_woe <- train_woe[, -which(colnames(train_woe) %in% grep("coarse", colnames(train_woe), value = TRUE) | colnames(train_woe) %in% cols_to_woe) ]
 test_woe <- test_woe[, -which(colnames(test_woe) %in% grep("coarse", colnames(test_woe), value = TRUE) | colnames(test_woe) %in% cols_to_woe) ]
 
+# ------------------------------------------------------------------------------ Recategorizing factors
 
 train_woe$def <- factor(ifelse(train_woe$def == "1","yes","no"))
 train_woe$no_income <- factor(ifelse(train_woe$no_income == "1","yes","no"))
@@ -187,8 +192,36 @@ test_woe$def <- factor(ifelse(test_woe$def == "1","yes","no"))
 test_woe$no_income <- factor(ifelse(test_woe$no_income == "1","yes","no"))
 test_woe$no_dependents <- factor(ifelse(test_woe$no_dependents == "1","yes","no"))
 
+train_woe$def_two <- NULL
+test_woe$def_two <- NULL
 
-save(train_woe, file = "data/train_woe.Rdata")
-save(test_woe, file = "data/test_woe.Rdata")
+# ------------------------------------------------------------------------------ Correlation 
+
+res <- cor(train[,which(colnames(train) %in% numeric_cols)])
+round(res, 2)
+corrplot(res)
+# Highest correlation coefficient is 0.43 - we keep all variables 
+
+
+# ------------------------------------------------------------------------------ SMOTE 
+
+train_woe$ID <- seq.int(nrow(train_woe))
+temp_train <- DMwR::SMOTE(def ~ ., train_woe, perc.over = 100, k = 8)
+temp_train <- subset(temp_train, def == "yes")
+temp_train <- rbind(train_woe, temp_train)
+train_woe_smote <- distinct(temp_train)
+train_woe$ID <- NULL
+train_woe_smote$ID <- NULL
+rm(temp_train)
+
+summary(train_woe$def)
+summary(train_woe_smote$def)
+
+
+# ------------------------------------------------------------------------------ Save datasets 
+
+# save(train_woe, file = "data/train_woe.Rdata")
+# save(test_woe, file = "data/test_woe.Rdata")
+# save(train_woe_smote, file = "data/train_woe_smote.Rdata")
 
 summary(train_woe)

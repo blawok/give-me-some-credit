@@ -203,10 +203,13 @@ corrplot(res)
 # ------------------------------------------------------------------------------ Validation set
 
 set.seed(361309)
+rm(split_var)
 split_var <- sample.split(train_woe$def, SplitRatio = 0.9)
 train_woe <- train_woe[split_var==T,]
 validation_woe <- train_woe[split_var==F,]
-rm(split_var)
+
+colSums(is.na(train_woe))
+colSums(is.na(validation_woe))
 
 # ------------------------------------------------------------------------------ SMOTE 
 

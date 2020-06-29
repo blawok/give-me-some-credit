@@ -21,6 +21,10 @@ y_train <- train_woe[,6]
 x_test <- test_woe[,-6]
 y_test <- test_woe[,6]
 
+# ------------------------------------------------------------------------------ Logistic Regression
+
+
+
 # ------------------------------------------------------------------------------ Random Forest
 
 rf_model <- randomForest(x = x_train, 

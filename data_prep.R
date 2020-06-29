@@ -12,8 +12,6 @@ library(woe)
 library(riv)
 library(DMwR)
 library(corrplot)
-library(smotefamily)
-library(imbalance)
 
 
 data <- read.csv('data/cs-training.csv')
@@ -197,16 +195,23 @@ test_woe$def_two <- NULL
 
 # ------------------------------------------------------------------------------ Correlation 
 
-res <- cor(train[,which(colnames(train) %in% numeric_cols)])
+res <- cor(train[,which(colnames(train) %in% numeric_cols | colnames(train) %in% grep("def", colnames(train), value=TRUE))])
 round(res, 2)
 corrplot(res)
 # Highest correlation coefficient is 0.43 - we keep all variables 
 
+# ------------------------------------------------------------------------------ Validation set
+
+set.seed(361309)
+split_var <- sample.split(train_woe$def, SplitRatio = 0.9)
+train_woe <- train_woe[split_var==T,]
+validation_woe <- train_woe[split_var==F,]
+rm(split_var)
 
 # ------------------------------------------------------------------------------ SMOTE 
 
 train_woe$ID <- seq.int(nrow(train_woe))
-temp_train <- DMwR::SMOTE(def ~ ., train_woe, perc.over = 100, k = 3)
+temp_train <- DMwR::SMOTE(def ~ ., train_woe, perc.over = 50, k = 3)
 temp_train <- subset(temp_train, def == "yes")
 temp_train <- rbind(train_woe, temp_train)
 train_woe_smote <- distinct(temp_train)
@@ -217,11 +222,10 @@ rm(temp_train)
 summary(train_woe$def)
 summary(train_woe_smote$def)
 
-
 # ------------------------------------------------------------------------------ Save datasets 
 
-# save(train_woe, file = "data/train_woe.Rdata")
-# save(test_woe, file = "data/test_woe.Rdata")
-# save(train_woe_smote, file = "data/train_woe_smote.Rdata")
+save(train_woe, file = "data/train_woe.Rdata")
+save(test_woe, file = "data/test_woe.Rdata")
+save(validation_woe, file = "data/validation_woe.Rdata")
+save(train_woe_smote, file = "data/train_woe_smote.Rdata")
 
-summary(train_woe)

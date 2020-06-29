@@ -206,7 +206,7 @@ corrplot(res)
 # ------------------------------------------------------------------------------ SMOTE 
 
 train_woe$ID <- seq.int(nrow(train_woe))
-temp_train <- DMwR::SMOTE(def ~ ., train_woe, perc.over = 100, k = 8)
+temp_train <- DMwR::SMOTE(def ~ ., train_woe, perc.over = 100, k = 3)
 temp_train <- subset(temp_train, def == "yes")
 temp_train <- rbind(train_woe, temp_train)
 train_woe_smote <- distinct(temp_train)

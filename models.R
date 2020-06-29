@@ -5,6 +5,9 @@ library(pROC) # - auc(), roc.test itp.
 library(gtools) # smartbind()
 library(plotROC)
 
+load("data/train_woe_smote.Rdata")
+load("data/train_woe.Rdata")
+load("data/test_woe.Rdata")
 source("model_functions.R")
 
 # ------------------------------------------------------------------------------ Baseline model estimation

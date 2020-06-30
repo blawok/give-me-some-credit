@@ -97,7 +97,7 @@ roc_test_baza
 # 0
 roc_test_og
 # 0.003825073
-# (reject H0 in both cases) roc curves are not equally good
+# (reject H0 in both cases) roc curves are not equally good 
 
 # ------------------------------------------------------------------------------ Plotting scores
 

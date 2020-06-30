@@ -155,8 +155,8 @@ xgb_model <- xgboost(data = as.matrix(train_woe[,-c(6, 14)]),
 result_table$xgb_model <- predict(xgb_model, as.matrix(validation_woe[,-6]))
 
 # ROC
-roc_gbm <- roc(result_table$def, result_table$xgb_model)
-auc(roc_gbm)
+roc_xgb <- roc(result_table$def, result_table$xgb_model)
+auc(roc_xgb)
 plot(roc_gbm, print.auc=TRUE)
 # AUC = 0.8546
 

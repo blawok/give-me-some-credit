@@ -101,6 +101,26 @@ test_table$xgb_score<-(660-40/log(1/2)*log(1/72))+40/log(1/2)*log(test_table$xgb
 score_cut <- smbinning(test_table[,c("def", "xgb_score")], y="def", x="xgb_score", p=0.1)
 score_cut$ivtable
 
+# Cutpoint CntRec CntGood CntBad CntCumRec CntCumGood CntCumBad PctRec GoodRate BadRate     Odds LnOdds     WoE     IV
+# 1 <= 461.0667   1592    1031    561      1592       1031       561 0.1061   0.6476  0.3524   1.8378 0.6086 -2.0273 0.9846
+# 2 <= 490.1397   1501    1363    138      3093       2394       699 0.1001   0.9081  0.0919   9.8768 2.2902 -0.3457 0.0139
+# 3 <= 512.6249   1524    1412    112      4617       3806       811 0.1016   0.9265  0.0735  12.6071 2.5343 -0.1016 0.0011
+# 4 <= 561.2695   2936    2829    107      7553       6635       918 0.1957   0.9636  0.0364  26.4393 3.2748  0.6390 0.0610
+# 5 <= 579.0801   1789    1753     36      9342       8388       954 0.1193   0.9799  0.0201  48.6944 3.8856  1.2497 0.1117
+# 6  > 579.0801   5658    5609     49     15000      13997      1003 0.3772   0.9913  0.0087 114.4694 4.7403  2.1045 0.7405
+# 7     Missing      0       0      0     15000      13997      1003 0.0000      NaN     NaN      NaN    NaN     NaN    NaN
+# 8       Total  15000   13997   1003        NA         NA        NA 1.0000   0.9331  0.0669  13.9551 2.6358  0.0000 1.9128
+
+IV <- score_cut$ivtable
+#plotting woe for this variable
+plot<-IV[!is.na(IV$WoE) & IV$Cutpoint!="Total",]
+plot$pos <- c(-1, -0.17, 0,0.3,0.6,1.1)
+ggplot(plot, aes(x=Cutpoint, fill=WoE)) +
+  geom_bar(aes(weight=WoE)) +
+  ylab('WoE') +
+  ggtitle('WoE Scores Test Set')+
+  geom_label(aes(label=paste("WoE=",format(plot$WoE,digits=1)," \n Fill=",round(plot$PctRec,3)*100, "%", sep=""), y=pos), colour = "white", fontface = "bold")
+
 
 # ------------------------------------------------------------------------------ # Cutting the score on all data
 
@@ -118,3 +138,18 @@ score_cut$ivtable
 # 6  > 609.4681  20220   20143     77    150000     139974     10026 0.1348   0.9962  0.0038 261.5974 5.5668  2.9305 0.3992
 # 7     Missing      0       0      0    150000     139974     10026 0.0000      NaN     NaN      NaN    NaN     NaN    NaN
 # 8       Total 150000  139974  10026        NA         NA        NA 1.0000   0.9332  0.0668  13.9611 2.6363  0.0000 2.0007
+
+IV <- score_cut$ivtable
+#plotting woe for this variable
+plot<-IV[!is.na(IV$WoE) & IV$Cutpoint!="Total",]
+plot$pos <- c(-1, -0.1, 0.45,0.8,1,1.5)
+ggplot(plot, aes(x=Cutpoint, fill=WoE)) +
+  geom_bar(aes(weight=WoE)) +
+  ylab('WoE') +
+  ggtitle('WoE Scores Full Set')+
+  geom_label(aes(label=paste("WoE=",format(plot$WoE,digits=1)," \n Fill=",round(plot$PctRec,3)*100, "%", sep=""), y=pos), colour = "white", fontface = "bold")
+
+iv_cuts <- score_cut$cuts
+plot$cuts <- c(473.0546 ,518.3472 ,565.6915 ,589.5328 ,609.4681,609.4681)
+ggplot(plot, aes(x=cuts, y=WoE)) +
+  geom_line() + geom_smooth()

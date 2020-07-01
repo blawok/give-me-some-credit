@@ -4,6 +4,7 @@ list.of.packages <- c(
                       "caTools",
                       "smbinning",
                       "dplyr",
+                      "imputeTS",
                       "zoo",
                       "vcd",
                       "pROC",
@@ -21,7 +22,9 @@ list.of.packages <- c(
                       "sm",
                       "randomForest",
                       "gbm",
-                      "caret")
+                      "caret",
+                      "knitr",
+                      "scales")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages, repos = "http://cran.us.r-project.org")
@@ -32,6 +35,7 @@ library(ggplot2)
 library(caTools)
 library(smbinning) 
 library(dplyr)
+library(imputeTS)
 library(zoo)
 library(vcd)
 library(pROC)
@@ -51,3 +55,4 @@ library(caret)
 library(xgboost)
 library(sm)
 library(knitr)
+library(scales)

@@ -1,5 +1,5 @@
 ---
-title: "Credit Risk - methods of scorecards development in R"
+title: "Credit Risk: Methods of scorecards development in R"
 subtitle: 'Credit risk analysis using various methods and creation of scorecard based on the best performing model'
 author: "Bartlomiej Kowalczuk & Michal Thor"
 date: "27 06 2020"
@@ -37,6 +37,7 @@ g-table-intro h4 {
   
 <a href="https://github.com/blawok/give-me-some-credit" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
 
+***
 
 ## Short description:
 
@@ -62,7 +63,7 @@ We also had to change some variable names and remove index variable (for further
 source("load_libraries.R")
 ```
 
-```{r load_data, echo=TRUE, warning=FALSE, message=FALSE}
+```{r load_data, echo=FALSE, warning=FALSE, message=FALSE}
 
 data <- read.csv('data/cs-training.csv')
 
@@ -84,7 +85,7 @@ First, we split the training dataset (150,000 observations) into train/test sets
 We split the data with respect to default - we need to retain percentage of defaults the same in both sets. It is essential, because the dataset is very imbalanced - there are only ~ 7% of defaults in the dataset.
 Therefore, after the splitting, we have 0.9/0.1 train/test split - both with around 7% of defaults.
 
-```{r test_split, echo=TRUE, warning=FALSE, message=FALSE}
+```{r test_split, echo=FALSE, warning=FALSE, message=FALSE}
 
 summary(data$def)
 
@@ -100,33 +101,21 @@ test <- data[split_var==F,]
 
 ## NA imputation:
 
-```{r na_imputation, echo=TRUE, warning=FALSE, message=FALSE}
-
-sum(is.na(train))
-colSums(is.na(train))
+```{r na_imputation, echo=FALSE, warning=FALSE, message=FALSE}
 
 # Monthly income NA filling
 train$no_income <- ifelse(is.na(train$MonthlyIncome), '1', '0')
 test$no_income <- ifelse(is.na(test$MonthlyIncome), '1', '0')
-sum(train$no_income == '1')
 
-summary(train$MonthlyIncome)
 # mean for test set: 6643
 
 train$MonthlyIncome <- na_mean(train$MonthlyIncome)
 test$MonthlyIncome <- ifelse(is.na(test$MonthlyIncome), 6643, test$MonthlyIncome)
-sum(is.na(train$MonthlyIncome))
-
-# NumberOfDependents NA filling
-summary(train$NumberOfDependents)
 
 train$no_dependents <- ifelse(is.na(train$NumberOfDependents), '1', '0')
 test$no_dependents <- ifelse(is.na(test$NumberOfDependents), '1', '0')
 train$NumberOfDependents <- ifelse(is.na(train$NumberOfDependents), 1, train$NumberOfDependents)
 test$NumberOfDependents <- ifelse(is.na(test$NumberOfDependents), 1, test$NumberOfDependents)
-
-summary(train$NumberOfDependents)
-sum(is.na(train$NumberOfDependents))
 
 ```
 
@@ -140,9 +129,7 @@ Therefore we end up with 10 numerical variables and 2 factors.
 
 Then we have a look at how each variable is distributed using histograms:
 
-```{r histograms, echo=TRUE, warning=FALSE, message=FALSE}
-
-summary(train)
+```{r histograms, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, fig.height=6}
 
 numeric_cols <- colnames(select_if(train, is.numeric))[c(1:8)]
 hist_df <- gather(train[, which(names(train) %in% numeric_cols)], key = "name", value = "value")
@@ -152,13 +139,12 @@ ggplot(hist_df) +
   facet_wrap(~name, ncol = 4, scales = "free") +
   ggtitle("Histograms of all variables")
 
-# different distributions, a lot of outliers, woe will deal with this
 rm(hist_df)
 ```
 
 We can see that some of the variables have outliers which after further inspection might bias our estimations and we decided to impute them with different value.
 
-```{r outliers, echo=TRUE, warning=FALSE, message=FALSE}
+```{r outliers, echo=FALSE, warning=FALSE, message=FALSE}
 remove_outliers <- function(x, na.rm = TRUE) {
   qnt <- quantile(x, probs=c(.05, .95), na.rm = na.rm)
   H <- 2 * IQR(x, na.rm = na.rm)
@@ -168,12 +154,10 @@ remove_outliers <- function(x, na.rm = TRUE) {
   y
 }
 
-summary(train)
-colnames(train)
-
 train$DebtRatio <- remove_outliers(train$DebtRatio)
 train$MonthlyIncome <- remove_outliers(train$MonthlyIncome)
 train$RevolvingUtilizationOfUnsecuredLines <- remove_outliers(train$RevolvingUtilizationOfUnsecuredLines)
+
 ```
 
 We assess observations that are 2 x IQR under 5th and above 95th percentile to be outliers and we impute them with 5th and 95th percentile respectively. Using this method we changed the value of 3 variables (*RevolvingUtilizationOfUnsecuredLines*, *DebtRatio* and *MonthlyIncome*) and jointly ~8000 values.
@@ -182,7 +166,7 @@ We assess observations that are 2 x IQR under 5th and above 95th percentile to b
 
 ## Creating WoE variables
 
-```{r woe_sets, echo=TRUE, warning=FALSE, message=FALSE}
+```{r woe_sets, echo=FALSE, warning=FALSE, message=FALSE}
 
 train_woe <- as.data.frame(train)
 test_woe <- as.data.frame(test)
@@ -200,7 +184,7 @@ These variables seem to be good candidates - they have low variance but values h
 
 Below plots and tables for splits are shown. We set the *smbinning* package to split the variable into maximum of 10 intervals.
 
-```{r woe_30_59_pastdue, echo=TRUE, warning=FALSE, message=FALSE}
+```{r woe_30_59_pastdue, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, fig.height=6}
 
 result_1 <- smbinning(train[,c("def_two", "NumberOfTime30_59DaysPastDueNotWorse")], y="def_two", x="NumberOfTime30_59DaysPastDueNotWorse", p=0.1)
 train_woe[,"NumberOfTime30_59DaysPastDueNotWorse_coarse"]<- cut(as.numeric(train[,"NumberOfTime30_59DaysPastDueNotWorse"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
@@ -215,26 +199,21 @@ train_woe <- merge(train_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberOfTime30_59D
 colnames(train_woe)[which(names(train_woe) == "WoE")] <- "NumberOfTime30_59DaysPastDueNotWorse_woe"
 test_woe <- merge(test_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberOfTime30_59DaysPastDueNotWorse_coarse", by.y="Cutpoint", all.x=T, sort=F)
 colnames(test_woe)[which(names(test_woe) == "WoE")] <- "NumberOfTime30_59DaysPastDueNotWorse_woe"
-# OK IV 0.6618
-#   Cutpoint CntRec CntGood CntBad CntCumRec CntCumGood CntCumBad PctRec GoodRate BadRate    Odds LnOdds     WoE     IV
-# 1     <= 0 113446  108898   4548    113446     108898      4548 0.8403   0.9599  0.0401 23.9442 3.1757  0.5394 0.1944
-# 2   <= Inf  21554   17079   4475    135000     125977      9023 0.1597   0.7924  0.2076  3.8165 1.3393 -1.2970 0.4674
-# 3  Missing      0       0      0    135000     125977      9023 0.0000      NaN     NaN     NaN    NaN     NaN    NaN
-# 4    Total 135000  125977   9023        NA         NA        NA 1.0000   0.9332  0.0668 13.9618 2.6363  0.0000 0.6618
 
-
-#plotting woe for this variable
 plot<-IV[!is.na(IV$WoE) & IV$Cutpoint!="Total",]
-# plot$WoE<-ifelse(plot$WoE==Inf, 8, ifelse(plot$WoE==-Inf, -8,plot$WoE))
-plot$pos <- c(-0.25, 0.65)
+plot$pos <- c(0.26, -0.65)
 ggplot(plot, aes(x=Cutpoint, fill=WoE)) +
   geom_bar(aes(weight=WoE)) +
   ylab('WoE') +
-  ggtitle('NumberOfTime30_59DaysPastDueNotWorse')+
-  geom_label(aes(label=paste("WoE=",format(plot$WoE,digits=1)," \n Fill=",round(plot$PctRec,3)*100, "%", sep=""), y=pos), colour = "white", fontface = "bold")
+  ggtitle('NumberOfTime30_59DaysPastDueNotWorse') +
+  geom_label(aes(label=paste("WoE=",format(WoE,digits=1)," \n Fill=",round(PctRec,3)*100, "%", sep=""), y=pos), colour = "white", fontface = "bold")
+
+knitr::kable(IV[c(1:2, 4),c(1:4, 9:14)])
 ```
 
-```{r woe_num_creditlines, echo=TRUE, warning=FALSE, message=FALSE}
+As we can see, first variable is split into two intervals - equal to zero and above zero. That split is quite intuitive from our experience - people who have been in >30 DPD are more likely to default. Information Value of this variable after splitting is 0.6618 and it visibly splits population into Bads/Goods (hence the higher BadRate in one interval).
+
+```{r woe_num_creditlines, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, fig.height=6}
 
 result_1 <- smbinning(train[,c("def_two", "NumberOfOpenCreditLinesAndLoans")], y="def_two", x="NumberOfOpenCreditLinesAndLoans", p=0.1)
 train_woe[,"NumberOfOpenCreditLinesAndLoans_coarse"]<- cut(as.numeric(train[,"NumberOfOpenCreditLinesAndLoans"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
@@ -249,29 +228,23 @@ train_woe <- merge(train_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberOfOpenCredit
 colnames(train_woe)[which(names(train_woe) == "WoE")] <- "NumberOfOpenCreditLinesAndLoans_woe"
 test_woe <- merge(test_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberOfOpenCreditLinesAndLoans_coarse", by.y="Cutpoint", all.x=T, sort=F)
 colnames(test_woe)[which(names(test_woe) == "WoE")] <- "NumberOfOpenCreditLinesAndLoans_woe"
-# OK IV 0.0661
-#   Cutpoint CntRec CntGood CntBad CntCumRec CntCumGood CntCumBad PctRec GoodRate BadRate    Odds LnOdds     WoE     IV
-# 1     <= 3  19865   17730   2135     19865      17730      2135 0.1471   0.8925  0.1075  8.3044 2.1168 -0.5195 0.0498
-# 2    <= 13  95328   89823   5505    115193     107553      7640 0.7061   0.9423  0.0577 16.3166 2.7922  0.1559 0.0160
-# 3   <= Inf  19807   18424   1383    135000     125977      9023 0.1467   0.9302  0.0698 13.3218 2.5894 -0.0469 0.0003
-# 4  Missing      0       0      0    135000     125977      9023 0.0000      NaN     NaN     NaN    NaN     NaN    NaN
-# 5    Total 135000  125977   9023        NA         NA        NA 1.0000   0.9332  0.0668 13.9618 2.6363  0.0000 0.0661
 
-
-#plotting woe for this variable
 plot<-IV[!is.na(IV$WoE) & IV$Cutpoint!="Total",]
-# plot$WoE<-ifelse(plot$WoE==Inf, 8, ifelse(plot$WoE==-Inf, -8,plot$WoE))
-plot$pos <- c(0.3, -0.08, 0.02)
+plot$pos <- c(-0.25, 0.07, -0.02)
 ggplot(plot, aes(x=Cutpoint, fill=WoE)) +
   geom_bar(aes(weight=WoE)) +
   ylab('WoE') +
   ggtitle('NumberOfOpenCreditLinesAndLoans')+
   scale_x_discrete(limits = c('<= 3','<= 13','<= Inf')) +
-  geom_label(aes(label=paste("WoE=",format(plot$WoE,digits=1)," \n Fill=",round(plot$PctRec,3)*100, "%", sep=""), y=pos), colour = "white", fontface = "bold")
+  geom_label(aes(label=paste("WoE=",format(WoE,digits=1)," \n Fill=",round(PctRec,3)*100, "%", sep=""), y=pos), colour = "white", fontface = "bold")
+
+knitr::kable(IV[c(1:3, 5),c(1:4, 9:14)])
 
 ```
 
-```{r woe_num_realestate, echo=TRUE, warning=FALSE, message=FALSE}
+Second variable, which stands for *Number of open credit lines and loans* was split into 3 intervals - less than 3, between 3 and 13 and above 13. That split is not that logical - people with almost none and people with more than 13 ongoing liabailities are most likely to default (according to our data) but people with between 3 and 13 ongoing loans/credit lines open are rather good clients. IV is 0.66 - again it is considered valuable.
+
+```{r woe_num_realestate, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, fig.height=6}
 
 result_1 <- smbinning(train[,c("def_two", "NumberRealEstateLoansOrLines")], y="def_two", x="NumberRealEstateLoansOrLines", p=0.1)
 train_woe[,"NumberRealEstateLoansOrLines_coarse"]<- cut(as.numeric(train[,"NumberRealEstateLoansOrLines"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
@@ -286,27 +259,22 @@ train_woe <- merge(train_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberRealEstateLo
 colnames(train_woe)[which(names(train_woe) == "WoE")] <- "NumberRealEstateLoansOrLines_woe"
 test_woe <- merge(test_woe,IV[,c("Cutpoint", "WoE")],by.x= "NumberRealEstateLoansOrLines_coarse", by.y="Cutpoint", all.x=T, sort=F)
 colnames(test_woe)[which(names(test_woe) == "WoE")] <- "NumberRealEstateLoansOrLines_woe"
-# OK IV 0.0466
-#   Cutpoint CntRec CntGood CntBad CntCumRec CntCumGood CntCumBad PctRec GoodRate BadRate    Odds LnOdds     WoE     IV
-# 1     <= 0  50574   46358   4216     50574      46358      4216 0.3746   0.9166  0.0834 10.9957 2.3975 -0.2388 0.0237
-# 2     <= 1  47053   44603   2450     97627      90961      6666 0.3485   0.9479  0.0521 18.2053 2.9017  0.2654 0.0219
-# 3   <= Inf  37373   35016   2357    135000     125977      9023 0.2768   0.9369  0.0631 14.8562 2.6984  0.0621 0.0010
-# 4  Missing      0       0      0    135000     125977      9023 0.0000      NaN     NaN     NaN    NaN     NaN    NaN
-# 5    Total 135000  125977   9023        NA         NA        NA 1.0000   0.9332  0.0668 13.9618 2.6363  0.0000 0.0466
 
-#plotting woe for this variable
 plot<-IV[!is.na(IV$WoE) & IV$Cutpoint!="Total",]
-# plot$WoE<-ifelse(plot$WoE==Inf, 8, ifelse(plot$WoE==-Inf, -8,plot$WoE))
-plot$pos <- c(0.15, -0.15, -0.03)
+plot$pos <- c(-0.11, 0.13, 0.03)
 ggplot(plot, aes(x=Cutpoint, fill=WoE)) +
   geom_bar(aes(weight=WoE)) +
   ylab('WoE') +
   ggtitle('NumberRealEstateLoansOrLines')+
   scale_x_discrete(limits = c('<= 0','<= 1','<= Inf')) +
-  geom_label(aes(label=paste("WoE=",format(plot$WoE,digits=1)," \n Fill=",round(plot$PctRec,3)*100, "%", sep=""), y=pos), colour = "white", fontface = "bold")
+  geom_label(aes(label=paste("WoE=",format(WoE,digits=1)," \n Fill=",round(PctRec,3)*100, "%", sep=""), y=pos), colour = "white", fontface = "bold")
+
+knitr::kable(IV[c(1:3, 5),c(1:4, 9:14)])
 ```
 
-```{r woe_debtratio, echo=TRUE, warning=FALSE, message=FALSE}
+Here we can see that clients with 1 mortgage are good clients and no mortgage/more than 1 mortgage indicate that the client is more inclined to default. IV of 0.0466 indicates non-negligeble predictive ability.
+
+```{r woe_debtratio, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, fig.height=6}
 
 result_1 <- smbinning(train[,c("def_two", "DebtRatio")], y="def_two", x="DebtRatio", p=0.1)
 train_woe[,"DebtRatio_coarse"]<- cut(as.numeric(train$DebtRatio), breaks=c(-Inf,unique(result_1$cuts),Inf), 
@@ -321,29 +289,22 @@ train_woe <- merge(train_woe,IV[,c("Cutpoint", "WoE")],by.x= "DebtRatio_coarse",
 colnames(train_woe)[which(names(train_woe) == "WoE")] <- "DebtRatio_woe"
 test_woe <- merge(test_woe,IV[,c("Cutpoint", "WoE")],by.x= "DebtRatio_coarse", by.y="Cutpoint", all.x=T, sort=F)
 colnames(test_woe)[which(names(test_woe) == "WoE")] <- "DebtRatio_woe"
-# OK IV 0.0723
-#    Cutpoint CntRec CntGood CntBad CntCumRec CntCumGood CntCumBad PctRec GoodRate BadRate    Odds LnOdds     WoE     IV
-# 1 <= 0.4234  75711   71244   4467     75711      71244      4467 0.5608   0.9410  0.0590 15.9490 2.7694  0.1331 0.0094
-# 2 <= 0.6447  18587   17075   1512     94298      88319      5979 0.1377   0.9187  0.0813 11.2930 2.4242 -0.2121 0.0068
-# 3 <= 3.9724  13689   12123   1566    107987     100442      7545 0.1014   0.8856  0.1144  7.7414 2.0466 -0.5897 0.0456
-# 4   <= 1267  13501   12687    814    121488     113129      8359 0.1000   0.9397  0.0603 15.5860 2.7464  0.1101 0.0012
-# 5    <= Inf  13512   12848    664    135000     125977      9023 0.1001   0.9509  0.0491 19.3494 2.9627  0.3263 0.0093
-# 6   Missing      0       0      0    135000     125977      9023 0.0000      NaN     NaN     NaN    NaN     NaN    NaN
-# 7     Total 135000  125977   9023        NA         NA        NA 1.0000   0.9332  0.0668 13.9618 2.6363  0.0000 0.0723
 
-#plotting woe for this variable
 plot<-IV[!is.na(IV$WoE) & IV$Cutpoint!="Total",]
-# plot$WoE<-ifelse(plot$WoE==Inf, 8, ifelse(plot$WoE==-Inf, -8,plot$WoE))
-plot$pos <- c(0.07, -0.1, -0.3,0.055,0.18)
+plot$pos <- c(0.07, -0.1, -0.3, 0.055, 0.18)
 ggplot(plot, aes(x=Cutpoint, fill=WoE)) +
   geom_bar(aes(weight=WoE)) +
   ylab('WoE') +
   ggtitle('DebtRatio')+
   scale_x_discrete(limits = c('<= 0.4234','<= 0.6447','<= 3.9724', '<= 1267', '<= Inf')) +
-  geom_label(aes(label=paste("WoE=",format(plot$WoE,digits=1)," \n Fill=",round(plot$PctRec,3)*100, "%", sep=""), y=pos), colour = "white", fontface = "bold")
+  geom_label(aes(label=paste("WoE=",format(WoE,digits=1)," \n Fill=",round(PctRec,3)*100, "%", sep=""), y=pos), colour = "white", fontface = "bold")
+
+knitr::kable(IV[c(1:5, 7),c(1:4, 9:14)])
 ```
 
-```{r update_woe_sets, echo=TRUE, warning=FALSE, message=FALSE}
+Finally the *Debt Ratio* - surprisingly, very high DR indicates that the client is less likely to default according to the data. However it may indicate some data flaws as it is very counter-intuitive. The worst clients are the ones with DR between 0.65 and 3.97. IV of 0.0723 indicates highest predictive ability of all WoE variables.
+
+```{r update_woe_sets, echo=FALSE, warning=FALSE, message=FALSE}
 rm(IV)
 rm(result_1)
 
@@ -372,7 +333,7 @@ test_woe$def_two <- NULL
 
 ## Variable correlation 
 
-```{r correlation_mat, echo=TRUE, warning=FALSE, message=FALSE, fig.height=6, fig.width=6}
+```{r correlation_mat, echo=FALSE, warning=FALSE, message=FALSE, fig.height=8, fig.width=8}
 
 corr_vars <- train[,which(colnames(train) %in% numeric_cols)]
 corr_vars <- corr_vars[,-which(colnames(train) %in% grep("def", colnames(train), value=TRUE))]
@@ -383,16 +344,13 @@ corrplot(res, method = "color", col = col(200),
          type = "lower", order = "hclust", number.cex = .7,
          addCoef.col = "black", # Add coefficient of correlation
          tl.col = "black", tl.srt = 90, # Text label color and rotation
-         # hide correlation coefficient on the principal diagonal
          diag = FALSE)
 
-# Highest correlation coefficient is 0.43 - we keep all variables 
 
 rm(corr_vars)
 ```
 
 As we can see, there are no significant correlations between any of the variables - therefore we keep all the variables in the further analysis.
-
 
 ***
 
@@ -402,16 +360,13 @@ Now we need to further split the training set into actual training dataset and v
 
 We are once again splitting the dataset into 0.9/0.1 train/validation sets.
 
-```{r validation_split, echo=TRUE, warning=FALSE, message=FALSE}
+```{r validation_split, echo=FALSE, warning=FALSE, message=FALSE}
 
 set.seed(361309)
 rm(split_var)
 split_var <- sample.split(train_woe$def, SplitRatio = 0.9)
 train_woe <- train_woe[split_var==T,]
 validation_woe <- train_woe[split_var==F,]
-
-colSums(is.na(train_woe))
-colSums(is.na(validation_woe))
 
 ```
 
@@ -464,7 +419,6 @@ First, we estimate basic models (with Intercept only and one with all variables)
 baza<-glm(def ~ 1,data=train_woe, family=binomial("logit"))
 
 max<-glm(def ~ .,data=train_woe, family=binomial("logit"))
-summary(max)
 
 ```
 
@@ -477,22 +431,18 @@ Then, we use *stepwise (both)* method to choose only statistically significant v
 
 ```
 
-
 *** 
 
 ## Quality assessment
 
-```{r gof_tests, echo=TRUE, warning=FALSE, message=FALSE}
-gf<-pchisq(model$deviance, model$df.residual,lower.tail = F)
+```{r gof_tests, echo=FALSE, warning=FALSE, message=FALSE}
+gf<-pchisq(logit_model$deviance, logit_model$df.residual,lower.tail = F)
 paste('Goodness Of Fit test p-value:', gf)
 
-ist<-pchisq(model$null.deviance-model$deviance, model$df.null-model$df.residual,lower.tail = F)
+ist<-pchisq(logit_model$null.deviance-logit_model$deviance, logit_model$df.null-logit_model$df.residual,lower.tail = F)
 paste('Goodness Of Fit test p-value:', ist)
 
-hr<-hosmerlem(y=train_woe$def, yhat=fitted(model),g=10)
-hosmerlem(y=train_woe$def, yhat=fitted(model),g=7)
-hosmerlem(y=train_woe$def, yhat=fitted(model),g=8)
-hosmerlem(y=train_woe$def, yhat=fitted(model),g=9)
+hr<-hosmerlem(y=train_woe$def, yhat=fitted(logit_model),g=10)
 paste('Hosmer-Lemeshow test p-value:', hr$p.value)
 ```
 
@@ -502,23 +452,19 @@ As we can see model is well fit to the data and the variables are statistically 
 
 # ------------------------------------------------------------------------------ Assigning PD to train_woe 
 train_woe$baza<-baza$fitted.values
-train_woe$model<-model$fitted.values
+train_woe$logit_model<-logit_model$fitted.values
 train_woe$max<-max$fitted.values
 
-train_woe$model<-predict(model, newdata=train_woe, type="response") 
-train_woe$model_b<-predict(model_stepwise_b, newdata=train_woe, type="response") 
-train_woe$model_f<-predict(model_stepwise_for, newdata=train_woe, type="response") 
+train_woe$logit_model<-predict(logit_model, newdata=train_woe, type="response")
 
-
-validation_woe$model<-predict(model, newdata=validation_woe, type="response") 
-validation_woe$max<-predict(max, newdata=validation_woe, type="response") 
-validation_woe$model_b<-predict(model_stepwise_b, newdata=validation_woe, type="response") 
-validation_woe$model_f<-predict(model_stepwise_for, newdata=validation_woe, type="response")
+validation_woe$logit_model<-predict(logit_model, newdata=validation_woe, type="response") 
+validation_woe$max<-predict(max, newdata=validation_woe, type="response")
+validation_woe$baza<-predict(baza, newdata=validation_woe, type="response")
 
 # ------------------------------------------------------------------------------ Score computation (train and test)
 
-validation_woe$score<-(660-40/log(1/2)*log(1/72))+40/log(1/2)*predict(model, newdata=validation_woe, type="link") 
-train_woe$score<-(660-40/log(1/2)*log(1/72))+40/log(1/2)*predict(model, newdata=train_woe, type="link") 
+validation_woe$score<-(660-40/log(1/2)*log(1/72))+40/log(1/2)*predict(logit_model, newdata=validation_woe, type="link") 
+train_woe$score<-(660-40/log(1/2)*log(1/72))+40/log(1/2)*predict(logit_model, newdata=train_woe, type="link") 
 
 ```
 
@@ -529,11 +475,11 @@ train_woe$score<-(660-40/log(1/2)*log(1/72))+40/log(1/2)*predict(model, newdata=
 
 Now we compare ROC curves of base and max model with our model chosen using stepwise method.
 
-```{r roc_test, echo=TRUE, warning=FALSE, message=FALSE}
+```{r roc_test, echo=FALSE, warning=FALSE, message=FALSE}
 
 # ------------------------------------------------------------------------------ ROC
-roc_test_baza<-roc.test(train_woe$def, train_woe$model, train_woe$baza,method="d")$p.value
-roc_test_og<-roc.test(train_woe$def, train_woe$max, train_woe$model,method="d")$p.value
+roc_test_baza<-roc.test(train_woe$def, train_woe$logit_model, train_woe$baza,method="d")$p.value
+roc_test_og<-roc.test(train_woe$def, train_woe$max, train_woe$logit_model,method="d")$p.value
 paste('Roc test p-value for stepwise and base:', roc_test_baza)
 paste('Roc test p-value for stepwise and max:', roc_test_og)
 ```
@@ -544,11 +490,11 @@ P-value of both tests is lower than the significance level (of 0.05) so we rejec
 
 ## Gini comparison
 
-```{r gini_comparison, echo=TRUE, warning=FALSE, message=FALSE}
-paste('Gini coefficients on the validation set:')
+```{r gini_comparison, echo=FALSE, warning=FALSE, message=FALSE}
+paste('Gini coefficients on the validation set')
 
 # MODEL BOTH STEPWISE
-paste('Gini coefficient for stepwise model:', 2*auc(validation_woe$def,validation_woe$model,direction="<")-1)
+paste('Gini coefficient for stepwise model:', 2*auc(validation_woe$def,validation_woe$logit_model,direction="<")-1)
 # MODEL ALL VARIABLES
 paste('Gini coefficient for max model:', 2*auc(validation_woe$def,validation_woe$max,direction="<")-1)
 # MODEL BASE
@@ -561,7 +507,9 @@ As we can see model chosen using stepwise methot outperformed the former - there
 ***
 ***
 
-## Model comparison
+# Model comparison
+
+## Quick description
 
 In this section we will compare four models build using different methods:
 
@@ -586,11 +534,13 @@ source("model_functions.R")
 
 ```
 
-### Logit model
+***
+
+## Logit
 
 Our logit model is the one we obtained using stepwise method, its scores are presented below:
 
-```{r logit_model, echo=TRUE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
+```{r logit_model, echo=FALSE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
 # ------------------------------------------------------------------------------ Logistic Regression
 par(mfrow=c(1,3))
 
@@ -611,12 +561,13 @@ legend("topleft",levels(result_table$def), fill=colfill)
 
 ```
 
+***
 
-### Random Forest
+## Random Forest
 
 Tuning led to the most efficient model with 100 estimators, 5 sampled features at each split and minimal node size being 1.
 
-```{r rf_model, echo=TRUE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
+```{r rf_model, echo=FALSE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
 # ------------------------------------------------------------------------------ Random Forest
 par(mfrow=c(1,3))
 
@@ -636,11 +587,13 @@ legend("topleft",levels(result_table$def), fill=colfill)
 
 ```
 
-### AdaBoost Model
+***
+
+## AdaBoost
 
 It turned out that the most optimal set of hyperparameters in AdaBoost model is 80 trees (lesser than in the Random Forest model), learning rate 0.07 and the model sampled 0.7 of the initial set in each tree.
 
-```{r gbm_model, echo=TRUE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
+```{r gbm_model, echo=FALSE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
 # ------------------------------------------------------------------------------ AdaBoost
 par(mfrow=c(1,3))
 
@@ -659,7 +612,9 @@ colfill<-c(2:(2+length(levels(result_table$def))))
 legend("topleft",levels(result_table$def), fill=colfill)
 ```
 
-### XGBoost Model
+***
+
+## XGBoost Model
 
 Optimal set of hyperparameters for the XGBoost is:
 
@@ -675,7 +630,7 @@ Optimal set of hyperparameters for the XGBoost is:
 * nrounds = 20
 
 
-```{r xgb_model, echo=TRUE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
+```{r xgb_model, echo=FALSE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
 # ------------------------------------------------------------------------------ XGBoost
 par(mfrow=c(1,3))
 
@@ -694,16 +649,18 @@ colfill<-c(2:(2+length(levels(result_table$def))))
 legend("topleft",levels(result_table$def), fill=colfill)
 ```
 
+***
 
-## Comparison table
+## Comparison tables
 
-All values are computed for validation set 
+All values are computed for validation set:
 
 ```{r comparison_table, echo=FALSE, warnings=FALSE, message=FALSE}
 load('models/test_comparison_table.RData')
 load('models/comparison_table.RData')
+par(mfrow=c(1,1))
 
-print(comparison_table)
+knitr::kable(comparison_table)
 
 ```
 
@@ -712,18 +669,42 @@ As you can see XGBoost outperformes all other methods. Population stability inde
 Below we present Gini coefficients for the test set (never previously seen in the training process):
 
 ```{r test_comparison, echo=FALSE, warnings=FALSE, message=FALSE}
-print(test_comparison)
+knitr::kable(test_comparison)
 ```
-Once again, XGBoost outperforms all other methos, therefore we decided to build the scorecard on its outcomes.
+
+Once again, XGBoost outperforms all other methods, therefore we decide to build the scorecard on its outcomes.
 
 ***
 ***
 
-## Scorecard
+# Scorecard
 
+## Creating the cutoffs
 
+Once we decided that XGBoost is our go-to model, we use the whole dataset (train+validation+test sets) to divide scores into risk-intervals and therefore create a scorecard.
 
+```{r scorecard, echo=FALSE, warnings=FALSE, message=FALSE, fig.width=12, fig.height=6}
 
+whole_table$def <- as.numeric(ifelse(whole_table$def == "yes", 0, 1))
+whole_table$xgb_score<-(660-40/log(1/2)*log(1/72))+40/log(1/2)*log(whole_table$xgb_model)
+score_cut <- smbinning(whole_table[,c("def", "xgb_score")], y="def", x="xgb_score", p=0.13)
+IV <- score_cut$ivtable
+plot<-IV[!is.na(IV$WoE) & IV$Cutpoint!="Total",]
+plot$pos <- c(-1, -0.1, 0.45,0.8,1,1.5)
+ggplot(plot, aes(x=Cutpoint, fill=WoE)) +
+  geom_bar(aes(weight=WoE)) +
+  ylab('WoE') +
+  ggtitle('WoE Scores Full Set')+
+  geom_label(aes(label=paste("WoE=",format(WoE,digits=1)," \n Fill=",round(PctRec,3)*100, "%", sep=""), y=pos), colour = "white", fontface = "bold")
+
+show_table <- IV[1:6,c("Cutpoint", "CntRec", "CntGood", "CntBad", "CntCumGood", "CntCumBad", "GoodRate", "BadRate")]
+show_table$Cutpoint <- c("0 - 473.05", "473.05 - 518.35", "518.35 - 565.69", "565.69 - 589.53", "589.53 - 609.47", "609.47 and higher")
+show_table$GoodRate <- percent(show_table$GoodRate)
+show_table$BadRate <- percent(show_table$BadRate)
+colnames(show_table) <- c("Score buckets", "No of clients", "Goods", "Bads", "Cumulative Goods", "Cumulative Bads", "Good rate", "Bad rate")
+
+knitr::kable(show_table)
+```
 
 
 

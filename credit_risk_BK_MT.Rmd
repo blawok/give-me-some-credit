@@ -706,7 +706,7 @@ colnames(show_table) <- c("Score buckets", "No of clients", "Goods", "Bads", "Cu
 knitr::kable(show_table)
 ```
 
-
+Based on the score buckets we would divide our clients into 6 potential groups with ideally different pricing and for example different interest rates. We could reject the most risky clients from chosen buckets (presumably first two) - all depending on business approach and desired exposure to risk.
 
 
 

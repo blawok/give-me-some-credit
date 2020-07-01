@@ -109,7 +109,7 @@ test_woe <- as.data.frame(test)
 
 # ---------------------------------------------------------------- NumberOfTime30_59DaysPastDueNotWorse
 
-result_1 <- smbinning(train[,c("def", "NumberOfTime30_59DaysPastDueNotWorse")], y="def", x="NumberOfTime30_59DaysPastDueNotWorse", p=0.1)
+result_1 <- smbinning(train[,c("def_two", "NumberOfTime30_59DaysPastDueNotWorse")], y="def_two", x="NumberOfTime30_59DaysPastDueNotWorse", p=0.1)
 train_woe[,"NumberOfTime30_59DaysPastDueNotWorse_coarse"]<- cut(as.numeric(train[,"NumberOfTime30_59DaysPastDueNotWorse"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
                                      labels=c(paste("<=", unique(result_1$cuts)),"<= Inf"),
                                      include.lowest = T)
@@ -145,7 +145,7 @@ ggplot(plot, aes(x=Cutpoint, fill=WoE)) +
 
 # ---------------------------------------------------------------- NumberOfOpenCreditLinesAndLoans
 
-result_1 <- smbinning(train[,c("def", "NumberOfOpenCreditLinesAndLoans")], y="def", x="NumberOfOpenCreditLinesAndLoans", p=0.1)
+result_1 <- smbinning(train[,c("def_two", "NumberOfOpenCreditLinesAndLoans")], y="def_two", x="NumberOfOpenCreditLinesAndLoans", p=0.1)
 train_woe[,"NumberOfOpenCreditLinesAndLoans_coarse"]<- cut(as.numeric(train[,"NumberOfOpenCreditLinesAndLoans"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
                                      labels=c(paste("<=", unique(result_1$cuts)),"<= Inf"),
                                      include.lowest = T)
@@ -181,7 +181,7 @@ ggplot(plot, aes(x=Cutpoint, fill=WoE)) +
 
 # ---------------------------------------------------------------- NumberRealEstateLoansOrLines
 
-result_1 <- smbinning(train[,c("def", "NumberRealEstateLoansOrLines")], y="def", x="NumberRealEstateLoansOrLines", p=0.1)
+result_1 <- smbinning(train[,c("def_two", "NumberRealEstateLoansOrLines")], y="def_two", x="NumberRealEstateLoansOrLines", p=0.1)
 train_woe[,"NumberRealEstateLoansOrLines_coarse"]<- cut(as.numeric(train[,"NumberRealEstateLoansOrLines"]), breaks=c(-Inf,unique(result_1$cuts),Inf), 
                                      labels=c(paste("<=", unique(result_1$cuts)),"<= Inf"),
                                      include.lowest = T)

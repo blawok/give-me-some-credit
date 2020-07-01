@@ -17,21 +17,6 @@ baza<-glm(def ~ 1,data=train_woe, family=binomial("logit"))
 max<-glm(def ~ .,data=train_woe, family=binomial("logit"))
 summary(max)
 
-# ------------------------------------------------------------------------------ Forward
-
-tim <- proc.time ()[1]	## applying cor (standard R implementation)
-model_stepwise_for<-step(baza, scope = list(upper=max, lower=~1 ), direction = "forward", trace=T,steps=30,k=2)
-cat ("cor runtime [s]:", proc.time ()[1] - tim, "(n =", ncol (baza)-3, ")\n")
-save(model_stepwise_for,file="data/model_stepwise_for.rdata")
-summary(model_stepwise_for)
-
-# ------------------------------------------------------------------------------ Backward
-
-tim <- proc.time ()[1]	## applying cor (standard R implementation)
-model_stepwise_b<-step(max,  direction = "backward", trace=T,steps=30,k=2)
-cat ("cor runtime [s]:", proc.time ()[1] - tim, "(n =", ncol (baza)-3, ")\n")
-save(model_stepwise_b,file="data/model_stepwise_bck.rdata")
-summary(model_stepwise_b)
 
 # ------------------------------------------------------------------------------ Stepwise (both)
 

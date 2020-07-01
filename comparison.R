@@ -93,8 +93,12 @@ colnames(test_comparison) <- c("model_name", "gini")
 
 View(test_comparison)
 
+save(test_comparison, file = 'models/test_comparison_table.RData')
+save(comparison_table, file = 'models/comparison_table.RData')
 
 # ------------------------------------------------------------------------------ # Cutting the score on test
+load('models/test_comparison_table.RData')
+load('models/comparison_table.RData')
 
 test_table$def <- as.numeric(ifelse(test_table$def == "yes", 0, 1))
 test_table$xgb_score<-(660-40/log(1/2)*log(1/72))+40/log(1/2)*log(test_table$xgb_model)

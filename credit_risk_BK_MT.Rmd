@@ -78,7 +78,7 @@ data$NumberOfTime60.89DaysPastDueNotWorse <- NULL
 
 *** 
 
-## Data clearing and split
+## Data cleaning and split
 
 First, we split the training dataset (150,000 observations) into train/test sets which we will use for training and final evaluation.
 We split the data with respect to default - we need to retain percentage of defaults the same in both sets. It is essential, because the dataset is very imbalanced - there are only ~ 7% of defaults in the dataset.
@@ -138,7 +138,7 @@ Therefore we end up with 10 numerical variables and 2 factors.
 
 ## Histograms
 
-Then we have a look at how each varaible is distributed by using histograms:
+Then we have a look at how each variable is distributed using histograms:
 
 ```{r histograms, echo=TRUE, warning=FALSE, message=FALSE}
 
@@ -198,7 +198,7 @@ After analyzing the histograms and supporting that with our own experience we de
 
 These variables seem to be good candidates - they have low variance but values higher than some threshold might be very indicative.
 
-Below plots and tables for splits are shown. We set the *smbinning* package to 
+Below plots and tables for splits are shown. We set the *smbinning* package to split the variable into maximum of 10 intervals.
 
 ```{r woe_30_59_pastdue, echo=TRUE, warning=FALSE, message=FALSE}
 
@@ -391,7 +391,7 @@ corrplot(res, method = "color", col = col(200),
 rm(corr_vars)
 ```
 
-As we can see, there are no significant correlations between any of the variables - therefore we keep all the variables in the furhter analysis.
+As we can see, there are no significant correlations between any of the variables - therefore we keep all the variables in the further analysis.
 
 
 ***
@@ -423,44 +423,41 @@ Since our dataset is very imbalanced (7% of observations are defaults), we try o
 
 ```{r smote, echo=TRUE, warning=FALSE, message=FALSE}
 
-train_woe$ID <- seq.int(nrow(train_woe))
-temp_train <- DMwR::SMOTE(def ~ ., train_woe, perc.over = 50, k = 3)
-temp_train <- subset(temp_train, def == "yes")
-temp_train <- rbind(train_woe, temp_train)
-train_woe_smote <- distinct(temp_train)
-train_woe$ID <- NULL
-train_woe_smote$ID <- NULL
-rm(temp_train)
-
-summary(train_woe$def)
-summary(train_woe_smote$def)
+# train_woe$ID <- seq.int(nrow(train_woe))
+# temp_train <- DMwR::SMOTE(def ~ ., train_woe, perc.over = 50, k = 3)
+# temp_train <- subset(temp_train, def == "yes")
+# temp_train <- rbind(train_woe, temp_train)
+# train_woe_smote <- distinct(temp_train)
+# train_woe$ID <- NULL
+# train_woe_smote$ID <- NULL
+# rm(temp_train)
+# 
+# summary(train_woe$def)
+# summary(train_woe_smote$def)
 ```
 
+Despite our best tries, adding observations obtained by synthetic oversampling did not improve model's predictive ability in further analysis, so we decided not to use it in this report.
 
 ***
 ***
 
-# Risk modelling 
+# Choosing the best logit model
 
-
-## Logit Model
-
-### Data and model loading
+## Data loading
 
 ```{r load_sets, echo=TRUE, warning=FALSE, message=FALSE}
 
 rm(list=ls(all=TRUE))
 
-load("data/train_woe_smote.Rdata")
 load("data/train_woe.Rdata")
 load("data/validation_woe.Rdata")
-source("model_functions.R")
-
 load("models/logit_model.Rdata")
+
+source("model_functions.R")
 
 ```
 
-First, we estimate basic models (with Intercept only and with all variables) - these will be our benchmarks when assessing the final logit model.
+First, we estimate basic models (with Intercept only and one with all variables) - these will be our benchmarks when assessing the final logit model.
 
 ```{r base_models, echo=TRUE, warning=FALSE, message=FALSE}
 
@@ -471,35 +468,35 @@ summary(max)
 
 ```
 
-Then, we use *stepwise (both)* method to choose only statistically significant variables. We are only providing the code, because the model is previously computed and we loaded it in the previous cell.
+Then, we use *stepwise (both)* method to choose only statistically significant variables. We are providing only the code, because the model is previously computed and we loaded it in the previous cell.
 
 ```{r load_stepwise, echo=TRUE, warning=FALSE, message=FALSE}
 
-# tim <- proc.time ()[1]	## applying cor (standard R implementation)
 # model_stepwise_both<-step(baza, scope = list(upper=max, lower=baza ), direction = "both", trace=T,steps=30,k=4)
-# cat ("cor runtime [s]:", proc.time ()[1] - tim, "(n =", ncol (baza)-3, ")\n")
-# save(model_stepwise_both,file="data/model_stepwise_both.rdata")
 # summary(model_stepwise_both)
 
 ```
 
-### Quality assessment
+
+*** 
+
+## Quality assessment
 
 ```{r gof_tests, echo=TRUE, warning=FALSE, message=FALSE}
 gf<-pchisq(model$deviance, model$df.residual,lower.tail = F)
-# 1 - (cannot reject H0) model is well fitted
+paste('Goodness Of Fit test p-value:', gf)
 
 ist<-pchisq(model$null.deviance-model$deviance, model$df.null-model$df.residual,lower.tail = F)
-# 0 - (reject H0) variables are not statistically irrelevant
+paste('Goodness Of Fit test p-value:', ist)
 
 hr<-hosmerlem(y=train_woe$def, yhat=fitted(model),g=10)
 hosmerlem(y=train_woe$def, yhat=fitted(model),g=7)
 hosmerlem(y=train_woe$def, yhat=fitted(model),g=8)
 hosmerlem(y=train_woe$def, yhat=fitted(model),g=9)
-hr$p.value
+paste('Hosmer-Lemeshow test p-value:', hr$p.value)
 ```
 
-As we can see model is well fit to the data and the variables are statistically significant (based on GoF, Hosmer-Lemeshow and LR tests).
+As we can see model is well fit to the data and the variables are statistically significant (based on GoF, Hosmer-Lemeshow and LR tests p-values).
 
 ```{r pd_and_score, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -520,30 +517,226 @@ validation_woe$model_f<-predict(model_stepwise_for, newdata=validation_woe, type
 
 # ------------------------------------------------------------------------------ Score computation (train and test)
 
-train_woe$score<-(660-40/log(1/2)*log(1/72))+40/log(1/2)*model$linear.predictors
 validation_woe$score<-(660-40/log(1/2)*log(1/72))+40/log(1/2)*predict(model, newdata=validation_woe, type="link") 
-
-
 train_woe$score<-(660-40/log(1/2)*log(1/72))+40/log(1/2)*predict(model, newdata=train_woe, type="link") 
 
 ```
 
-### ROC Tests
 
-Now we compare ROC curves of base and max model with our stepwise model.
+*** 
+
+## ROC Tests
+
+Now we compare ROC curves of base and max model with our model chosen using stepwise method.
 
 ```{r roc_test, echo=TRUE, warning=FALSE, message=FALSE}
 
 # ------------------------------------------------------------------------------ ROC
-#H0  ROC curves are equally good
 roc_test_baza<-roc.test(train_woe$def, train_woe$model, train_woe$baza,method="d")$p.value
 roc_test_og<-roc.test(train_woe$def, train_woe$max, train_woe$model,method="d")$p.value
-roc_test_baza
-# 0
-roc_test_og
-# 0.003825073
-# (reject H0 in both cases) roc curves are not equally good
+paste('Roc test p-value for stepwise and base:', roc_test_baza)
+paste('Roc test p-value for stepwise and max:', roc_test_og)
 ```
 
-P-value of both tests is lower than the significance level (of 0.05) so we conclude that the ROC curves are not equally good.
+P-value of both tests is lower than the significance level (of 0.05) so we reject the null hypotheses in favor of the alternative and conclude that the ROC curves are not equally good.
+
+*** 
+
+## Gini comparison
+
+```{r gini_comparison, echo=TRUE, warning=FALSE, message=FALSE}
+paste('Gini coefficients on the validation set:')
+
+# MODEL BOTH STEPWISE
+paste('Gini coefficient for stepwise model:', 2*auc(validation_woe$def,validation_woe$model,direction="<")-1)
+# MODEL ALL VARIABLES
+paste('Gini coefficient for max model:', 2*auc(validation_woe$def,validation_woe$max,direction="<")-1)
+# MODEL BASE
+paste('Gini coefficient for base model:', 2*auc(validation_woe$def,validation_woe$baza,direction="<")-1)
+
+```
+
+As we can see model chosen using stepwise methot outperformed the former - therefore we will be using it in further analysis.
+
+***
+***
+
+## Model comparison
+
+In this section we will compare four models build using different methods:
+
+* Logistic Regression (from the previous section)
+* Random Forest
+* Adaptive Boosting
+* Extreme Gradient Boosting
+
+```{r load_models, echo=FALSE, warning=FALSE, message=FALSE}
+
+rm(list=ls(all=TRUE))
+
+load(file = "models/logit_model.Rdata")
+load(file = "models/rf_model.Rdata")
+load(file = "models/gbm_model.Rdata")
+load(file = "models/xgb_model.Rdata")
+load(file = "models/result_table.RData")
+load(file = "models/train_result_table.RData")
+load(file = "models/test_table.RData")
+load(file = "models/whole_table.RData")
+source("model_functions.R")
+
+```
+
+### Logit model
+
+Our logit model is the one we obtained using stepwise method, its scores are presented below:
+
+```{r logit_model, echo=TRUE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
+# ------------------------------------------------------------------------------ Logistic Regression
+par(mfrow=c(1,3))
+
+# ROC
+plot(roc(result_table$def, result_table$logit_model), print.auc=TRUE, main='ROC Curve')
+
+# histogram of scores
+hist(result_table[result_table$def=="no",c("logit_score")], main='Histograms of scores', xlab='Scores')
+hist(result_table[result_table$def=="yes",c("logit_score")],add=TRUE,col='Red', alpha=I(0.5))
+# legend("topleft",levels(result_table$def), fill=colfill)
+
+
+# denstiy of scores
+sm.density.compare(result_table$logit_score, result_table$def, xlab="Scores from Logit Model")
+title(main="Score distribution per default")
+colfill<-c(2:(2+length(levels(result_table$def))))
+legend("topleft",levels(result_table$def), fill=colfill)
+
+```
+
+
+### Random Forest
+
+Tuning led to the most efficient model with 100 estimators, 5 sampled features at each split and minimal node size being 1.
+
+```{r rf_model, echo=TRUE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
+# ------------------------------------------------------------------------------ Random Forest
+par(mfrow=c(1,3))
+
+# ROC
+plot(roc(result_table$def, result_table$rf_model), print.auc=TRUE, main='ROC Curve')
+
+# histogram of scores
+hist(result_table[result_table$def=="no",c("rf_score")], main='Histograms of scores', xlab='Scores')
+hist(result_table[result_table$def=="yes",c("rf_score")],add=TRUE,col='Red', alpha=I(0.5))
+# legend("topleft",levels(result_table$def), fill=colfill)
+
+# denstiy of scores
+sm.density.compare(result_table$rf_score, result_table$def, xlab="Scores from Random Forest Model")
+title(main="Score distribution per default")
+colfill<-c(2:(2+length(levels(result_table$def))))
+legend("topleft",levels(result_table$def), fill=colfill)
+
+```
+
+### AdaBoost Model
+
+It turned out that the most optimal set of hyperparameters in AdaBoost model is 80 trees (lesser than in the Random Forest model), learning rate 0.07 and the model sampled 0.7 of the initial set in each tree.
+
+```{r gbm_model, echo=TRUE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
+# ------------------------------------------------------------------------------ AdaBoost
+par(mfrow=c(1,3))
+
+# ROC
+plot(roc(result_table$def, result_table$gbm_model), print.auc=TRUE, main='ROC Curve')
+
+# histogram of scores
+hist(result_table[result_table$def=="no",c("gbm_score")], main='Histograms of scores', xlab='Scores')
+hist(result_table[result_table$def=="yes",c("gbm_score")],add=TRUE,col='Red', alpha=I(0.5))
+# legend("topleft",levels(result_table$def), fill=colfill)
+
+# denstiy of scores
+sm.density.compare(result_table$gbm_score, result_table$def, xlab="Scores from AdaBoost Model")
+title(main="Score distribution per default")
+colfill<-c(2:(2+length(levels(result_table$def))))
+legend("topleft",levels(result_table$def), fill=colfill)
+```
+
+### XGBoost Model
+
+Optimal set of hyperparameters for the XGBoost is:
+
+* eta = 0.3
+* gamma = 0
+* max.depth = 4
+* max_delta_step = 0
+* subsample = 0.7
+* colsample_bytree = 0.85
+* lambda = 1
+* alpha = 0
+* scale_pos_weight = 4
+* nrounds = 20
+
+
+```{r xgb_model, echo=TRUE, warning=FALSE, message=FALSE, fig.height=4, fig.width=12}
+# ------------------------------------------------------------------------------ XGBoost
+par(mfrow=c(1,3))
+
+# ROC
+plot(roc(result_table$def, result_table$xgb_model), print.auc=TRUE, main='ROC Curve')
+
+# histogram of scores
+hist(result_table[result_table$def=="no",c("xgb_score")], main='Histograms of scores', xlab='Scores')
+hist(result_table[result_table$def=="yes",c("xgb_score")],add=TRUE,col='Red', alpha=I(0.5))
+# legend("topleft",levels(result_table$def), fill=colfill)
+
+# denstiy of scores
+sm.density.compare(result_table$xgb_score, result_table$def, xlab="Scores from XGBoost Model")
+title(main="Score distribution per default")
+colfill<-c(2:(2+length(levels(result_table$def))))
+legend("topleft",levels(result_table$def), fill=colfill)
+```
+
+
+## Comparison table
+
+All values are computed for validation set 
+
+```{r comparison_table, echo=FALSE, warnings=FALSE, message=FALSE}
+load('models/test_comparison_table.RData')
+load('models/comparison_table.RData')
+
+print(comparison_table)
+
+```
+
+As you can see XGBoost outperformes all other methods. Population stability index value is lower than 0.1 so we can conclude that the model is stable (we suspect that in case of Random Forest and AdaBoost models there occured division by zero because a lot of observations had the same value, therefore the outcome is flawed). Considering the Kolmogorov-Smirnov statistics, we can conclude that the distributions of scores in default groups are indeed different.
+
+Below we present Gini coefficients for the test set (never previously seen in the training process):
+
+```{r test_comparison, echo=FALSE, warnings=FALSE, message=FALSE}
+print(test_comparison)
+```
+Once again, XGBoost outperforms all other methos, therefore we decided to build the scorecard on its outcomes.
+
+***
+***
+
+## Scorecard
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
